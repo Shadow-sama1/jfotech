@@ -1,0 +1,379 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum AddressLabel {
+  HOME
+  WORK
+  OTHER
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  INITIALIZED
+  PENDING
+  SUCCESS
+  FAILED
+  ABANDONED
+  REFUNDED
+}
+
+enum DeliveryMethod {
+  DOOR
+  PICKUP
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  firstName     String?
+  lastName      String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  phone         String?   @unique
+  passwordHash  String?
+  role          UserRole  @default(CUSTOMER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  addresses     Address[]
+  authTokens    AuthToken[]
+  cart          Cart?
+  wishlist      WishlistItem[]
+  reviews       Review[]
+  orders        Order[]
+
+  @@index([email])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AuthToken {
+  id        String        @id @default(cuid())
+  userId    String
+  tokenHash String        @unique
+  type      AuthTokenType
+  expiresAt DateTime
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
+model Address {
+  id           String       @id @default(cuid())
+  userId       String
+  label        AddressLabel @default(HOME)
+  fullName     String
+  phone        String
+  street       String
+  street2      String?
+  city         String
+  state        String
+  lga          String
+  postalCode   String?
+  isDefault    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?    @db.Text
+  image       String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([parentId, sortOrder])
+  @@index([isActive, sortOrder])
+}
+
+model Product {
+  id             String         @id @default(cuid())
+  name           String
+  slug           String         @unique
+  sku            String         @unique
+  brand          String
+  description    String         @db.Text
+  shortDescription String       @db.VarChar(300)
+  price          Int
+  compareAtPrice Int?
+  stock          Int            @default(0)
+  capacity       String?
+  powerRating    Int?
+  voltage        String?
+  warranty       String?
+  installationEligible Boolean @default(false)
+  installationFee      Int     @default(0)
+  specifications Json           @default("{}")
+  isFeatured     Boolean        @default(false)
+  isPublished    Boolean        @default(false)
+  popularity     Int            @default(0)
+  categoryId     String
+  category       Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images         ProductImage[]
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
+  reviews        Review[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([categoryId, isPublished])
+  @@index([brand, isPublished])
+  @@index([price])
+  @@index([powerRating])
+  @@index([capacity])
+  @@index([isPublished, createdAt])
+  @@index([isFeatured, popularity])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  alt       String
+  sortOrder Int      @default(0)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([productId, sortOrder])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([productId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId, createdAt])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  rating    Int
+  title     String?
+  content   String   @db.Text
+  isVisible Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+  @@index([productId, isVisible, createdAt])
+}
+
+model DeliveryZone {
+  id        String   @id @default(cuid())
+  state     String   @unique
+  fee       Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, state])
+}
+
+model Coupon {
+  id              String     @id @default(cuid())
+  code            String     @unique
+  type            CouponType
+  value           Int
+  minimumSubtotal Int        @default(0)
+  maxDiscount     Int?
+  usageLimit      Int?
+  usageCount      Int        @default(0)
+  startsAt        DateTime?
+  expiresAt       DateTime?
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  orders          Order[]
+
+  @@index([isActive, startsAt, expiresAt])
+}
+
+model Order {
+  id                 String         @id @default(cuid())
+  reference          String         @unique
+  userId             String
+  addressId          String?
+  couponId           String?
+  status             OrderStatus    @default(PENDING)
+  deliveryMethod     DeliveryMethod
+  deliveryState      String
+  deliveryFee        Int            @default(0)
+  installationFee    Int            @default(0)
+  subtotal           Int
+  discount           Int            @default(0)
+  total              Int
+  preferredInstallAt DateTime?
+  pickupLocation     String?
+  customerNote       String?        @db.Text
+  paidAt             DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  user               User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  address            Address?       @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  coupon             Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items              OrderItem[]
+  payments           Payment[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([reference])
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  productId       String?
+  name            String
+  sku             String
+  image           String?
+  unitPrice       Int
+  quantity        Int
+  installation    Boolean  @default(false)
+  installationFee Int      @default(0)
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id                 String        @id @default(cuid())
+  orderId            String
+  reference          String        @unique
+  status             PaymentStatus @default(INITIALIZED)
+  amount             Int
+  currency           String        @default("NGN")
+  authorizationUrl   String?
+  accessCode         String?
+  channel            String?
+  gatewayResponse    String?
+  paidAt             DateTime?
+  webhookProcessedAt DateTime?
+  rawResponse        Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([status, createdAt])
+}

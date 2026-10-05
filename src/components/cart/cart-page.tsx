@@ -1,0 +1,27 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { formatNaira } from "@/lib/catalog";
+import { getCartCount, getCartSubtotal, useCartStore } from "@/stores/cart-store";
+
+export function CartPage() {
+  const items = useCartStore((state) => state.items);
+  const hydrated = useCartStore((state) => state.hydrated);
+  const setQuantity = useCartStore((state) => state.setQuantity);
+  const remove = useCartStore((state) => state.remove);
+  const subtotal = getCartSubtotal(items);
+
+  if (!hydrated) return <div className="mx-auto max-w-[1200px] px-5 py-14 text-sm text-muted">Loading your cart…</div>;
+
+  if (!items.length) return <div className="mx-auto grid min-h-[48vh] max-w-[700px] place-items-center px-5 py-14 text-center"><div><ShoppingBag className="mx-auto text-muted" size={42}/><h1 className="mt-5 text-2xl font-extrabold tracking-[-0.04em]">Your cart is empty</h1><p className="mt-2 text-sm text-muted">There is plenty of good energy to explore.</p><Link href="/shop" className="mt-6 inline-flex h-12 items-center bg-primary px-6 text-sm font-bold text-white hover:bg-primary-hover">Browse solar products</Link></div></div>;
+
+  return <div className="mx-auto max-w-[1200px] px-5 py-8 sm:px-8 sm:py-12 lg:px-10">
+    <div className="border-b border-border pb-5"><p className="text-xs font-bold uppercase tracking-[0.15em] text-primary">Shopping bag</p><h1 className="mt-2 text-3xl font-extrabold tracking-[-0.04em]">Your cart <span className="text-lg font-semibold text-muted">({getCartCount(items)})</span></h1></div>
+    <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1fr_350px]">
+      <section aria-label="Cart items" className="divide-y divide-border border-y border-border">{items.map(({ product, quantity }) => <article key={product.id} className="flex gap-4 py-5 sm:gap-5"><Link href={`/product/${product.slug}`} className="relative size-24 shrink-0 overflow-hidden bg-surface sm:size-32"><Image src={product.image} alt={product.name} fill sizes="128px" className="object-cover"/></Link><div className="flex min-w-0 flex-1 flex-col sm:flex-row sm:justify-between sm:gap-4"><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">{product.brand}</p><Link href={`/product/${product.slug}`} className="mt-1 block line-clamp-2 text-sm font-bold hover:text-primary sm:text-base">{product.name}</Link><p className="mt-2 text-sm font-extrabold text-primary">{formatNaira(product.price)}</p><p className="mt-1 text-xs text-muted">{product.stock} available</p></div><div className="mt-3 flex items-center gap-2 sm:mt-0 sm:self-center"><button type="button" onClick={() => setQuantity(product.id, quantity - 1)} aria-label={`Decrease ${product.name} quantity`} className="grid size-9 place-items-center border border-border"><Minus size={14}/></button><span className="min-w-7 text-center text-sm font-semibold">{quantity}</span><button type="button" onClick={() => setQuantity(product.id, quantity + 1)} disabled={quantity >= product.stock} aria-label={`Increase ${product.name} quantity`} className="grid size-9 place-items-center border border-border disabled:opacity-40"><Plus size={14}/></button><button type="button" onClick={() => remove(product.id)} aria-label={`Remove ${product.name}`} className="ml-2 grid size-9 place-items-center text-muted hover:text-primary"><Trash2 size={17}/></button></div></div></article>)}</section>
+      <aside className="border border-border p-5 sm:p-6"><h2 className="text-lg font-extrabold">Order summary</h2><div className="mt-5 flex justify-between text-sm"><span className="text-muted">Subtotal</span><span className="font-bold">{formatNaira(subtotal)}</span></div><div className="mt-3 flex justify-between text-sm"><span className="text-muted">Estimated delivery</span><span className="font-semibold">Calculated at checkout</span></div><form onSubmit={(event) => event.preventDefault()} className="mt-5 border-t border-border pt-4"><label htmlFor="cart-coupon" className="mb-2 block text-xs font-bold uppercase tracking-[0.1em]">Coupon code</label><div className="flex gap-2"><input id="cart-coupon" name="coupon" placeholder="Enter code" className="h-10 min-w-0 flex-1 border border-border px-3 text-sm"/><button type="submit" className="border border-ink px-3 text-xs font-bold hover:bg-surface">Apply</button></div><p className="mt-2 text-[11px] text-muted">Coupon validation will be available at checkout.</p></form><div className="mt-5 flex justify-between border-t border-border pt-4 text-sm"><span className="font-bold">Subtotal</span><span className="text-base font-extrabold text-primary">{formatNaira(subtotal)}</span></div><Link href="/checkout" className="mt-5 inline-flex h-12 w-full items-center justify-center bg-primary text-sm font-bold text-white hover:bg-primary-hover">Continue to checkout</Link><p className="mt-3 text-center text-xs leading-5 text-muted">Sign in is required before checkout. Your cart is saved on this device.</p><Link href="/shop" className="mt-3 block text-center text-sm font-semibold text-muted hover:text-primary">Continue shopping</Link></aside>
+    </div>
+  </div>;
+}

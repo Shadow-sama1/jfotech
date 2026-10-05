@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" role="img" aria-labelledby="title desc">
+  <title id="title">Solar product image unavailable</title>
+  <desc id="desc">A simple line illustration of a solar panel and sun.</desc>
+  <rect width="640" height="640" fill="#f7f7f8"/>
+  <circle cx="470" cy="155" r="43" fill="#fdecef" stroke="#d90429" stroke-width="8"/>
+  <g stroke="#d90429" stroke-linecap="round" stroke-width="9">
+    <path d="M470 75v-22m0 204v-22m80-80h22m-204 0h22m137-57 16-16m-146 146 16-16m114 0 16 16m-146-146 16 16"/>
+  </g>
+  <path d="m113 300 410 0-54 210H161z" fill="#0a0a0a" stroke="#6b6b6b" stroke-width="12" stroke-linejoin="round"/>
+  <g stroke="#ffffff" stroke-opacity=".55" stroke-width="8">
+    <path d="m222 300-21 210m98-210-7 210m96-210 7 210m65-210 21 210M139 405h358"/>
+  </g>
+  <path d="m270 510-30 64m132-64 30 64m-176 0h322" fill="none" stroke="#6b6b6b" stroke-linecap="round" stroke-width="12"/>
+</svg>
